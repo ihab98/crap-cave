@@ -1,0 +1,164 @@
+
+
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  margin: 0;
+  max-width: 100%;
+  max-height: 100%;
+  padding: 0 0 0 0;
+  color:white;
+  background-color: #000; 
+
+  width: 1400px;
+  height:700px;
+  
+}
+
+
+.backgroundn{
+  background-color: black;
+  
+
+}
+
+.navbar-custom .nav-item.active .nav-link,
+.navbar-custom .nav-item .nav-link:active,
+.navbar-custom .nav-item .nav-link:focus,
+.navbar-custom  {
+    color: white;
+  
+    
+}
+.navbar-custom { 
+    background-color: #000; 
+    border-bottom:1px solid #BB86FC;
+    
+} 
+
+.navbar-nav > li{
+    padding-left:30px;
+    padding-right:30px;
+  }
+  .navbar-custom .nav-link:hover {
+    color:white;
+    font-weight:bold;
+    border-bottom: 1px solid #BB86FC;
+    
+  }
+  
+  .navbar-custom .navbar-toggler-icon{
+    
+  }
+  a{
+    color:white
+  }
+  
+.purple{
+  color: #BB86FC
+}
+
+input.form-control[type=text]{
+  
+  border-radius: 50px;
+  background-color: #121212;
+  border-color: #121212;
+  height: 35px;
+
+}
+
+input.form-control[type=text]:focus{
+  border-color: #BB86FC
+}
+.container{
+  width: 100%;
+}
+
+.mar-0{
+  margin-left: 0;
+  padding-right: 15px;
+}
+
+.list-group{
+  
+  
+  border-color:  #BB86FC
+  
+
+}
+.list-group .list-group-item{
+  background-color: #000;
+  
+}
+
+
+.list-group-item.active {
+  color:white;
+  font-weight:bold;
+  background-color: #121212;
+  border-color:  #BB86FC;
+}
+
+.list-group-item:hover{
+  color:white;
+    font-weight:bold;
+}
+.has-search .form-control {
+  padding-left: 2.375rem;
+}
+.has-search .form-control-feedback {
+  position: absolute;
+  z-index: 2;
+  display: block;
+  width: 2.375rem;
+  height: 2.375rem;
+  line-height: 2.375rem;
+  text-align: center;
+  pointer-events: none;
+  color: white
+}
+
+.navbar-brand:hover{
+  color:#BB86FC;
+}
+
+
+
+.panel{
+  position:relative;
+  
+  
+}
+
+.carte{
+  position:absolute;
+  top: 0px;
+}
+
+.btnDistance{
+  color:white;
+  border-radius: 3px;
+  background-color: #000;
+  border-color:  #BB86FC;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  padding-right: 20px;
+  padding-left: 20px;
+}
+.btnDistance:hover{
+  color:white;
+  font-weight:bold;
+  background-color: #121212;
+}
+.btnDistance:active{
+  color:white;
+  font-weight:bold;
+  background-color: #121212;
+}
+
+.card{
+  border-color:  #BB86FC
+}
+.card-body{
+  background-color: #121212;
+}

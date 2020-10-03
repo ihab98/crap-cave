@@ -1,0 +1,26 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+	<title>Apollo Geo Panorama mode</title>
+	<meta charset="utf-8">
+	<link rel="stylesheet" href="css/styles.css?v=1.0">
+</head>
+
+<body style="background-color:black">
+	<script src="tour.js"></script>
+	<div>
+		<a id="homelink" href="javascript:history.back()" style="color: purple">Go Back</a>
+	</div>
+	<div id="pano" style="width:950px; height:500px;"></div>
+	
+	<script src="js/scripts.js"></script>
+	<script src="krpano.js"></script>
+	<script src="./renderer.js"></script>
+
+	<script>
+		embedpano({swf:"tour.swf", xml:"tour.xml", target:"pano"});
+	</script>
+
+
+</body>
+</html>

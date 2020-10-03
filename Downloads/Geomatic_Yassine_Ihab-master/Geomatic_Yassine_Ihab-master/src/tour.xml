@@ -1,0 +1,591 @@
+﻿<krpano version="1.20.7" title="Virtual Tour">
+
+	<include url="skin/vtourskin.xml" />
+
+
+
+	<!-- customize skin settings: maps, gyro, webvr, thumbnails, tooltips, layout, design, ... -->
+	<skin_settings maps="false"
+	               maps_type="google"
+	               maps_bing_api_key=""
+	               maps_google_api_key=""
+	               maps_zoombuttons="false"
+	               maps_loadonfirstuse="true"
+	               gyro="true"
+	               gyro_keeplookingdirection="false"
+	               webvr="true"
+	               webvr_keeplookingdirection="true"
+	               webvr_prev_next_hotspots="true"
+	               autotour="false"
+	               littleplanetintro="false"
+	               followmousecontrol="false"
+	               title="false"
+	               thumbs="false"
+	               thumbs_width="120" thumbs_height="80" thumbs_padding="10" thumbs_crop="0|40|240|160"
+	               thumbs_opened="false"
+	               thumbs_text="false"
+	               thumbs_dragging="true"
+	               thumbs_onhoverscrolling="false"
+	               thumbs_scrollbuttons="false"
+	               thumbs_scrollindicator="false"
+	               thumbs_loop="false"
+	               tooltips_buttons="false"
+	               tooltips_thumbs="false"
+	               tooltips_hotspots="false"
+	               tooltips_mapspots="false"
+	               deeplinking="false"
+	               loadscene_flags="MERGE"
+	               loadscene_blend="OPENBLEND(0.5, 0.0, 0.75, 0.05, linear)"
+	               loadscene_blend_prev="SLIDEBLEND(0.5, 180, 0.75, linear)"
+	               loadscene_blend_next="SLIDEBLEND(0.5,   0, 0.75, linear)"
+	               loadingtext="loading..."
+	               layout_width="100%"
+	               layout_maxwidth="814"
+	               controlbar_width="-24"
+	               controlbar_height="50"
+	               controlbar_offset="20"
+	               controlbar_offset_closed="-40"
+	               controlbar_overlap.no-fractionalscaling="10"
+	               controlbar_overlap.fractionalscaling="0"
+	               design_skin_images="vtourskin.png"
+	               design_bgcolor="#121212"
+	               design_bgalpha="0.8"
+	               design_bgborder="0"
+	               design_bgroundedge="12"
+	               design_bgshadow="0 4 10 0x000000 0.3"
+	               design_thumbborder_bgborder="3 0xFFFFFF 1.0"
+	               design_thumbborder_padding="200"
+	               design_thumbborder_bgroundedge="10"
+	               design_text_css="color:#FFFFFF; font-family:Arial;"
+	               design_text_shadow="1"
+	               />
+
+
+	<!--
+	    For an alternative skin design either change the <skin_settings> values 
+	    from above or optionally include one of the predefined designs from below.
+	-->
+	<!-- <include url="skin/vtourskin_design_flat_light.xml"  /> -->
+	<!-- <include url="skin/vtourskin_design_glass.xml"       /> -->
+	<!-- <include url="skin/vtourskin_design_ultra_light.xml" /> -->
+	<!-- <include url="skin/vtourskin_design_117.xml"         /> -->
+	<!-- <include url="skin/vtourskin_design_117round.xml"    /> -->
+	<!-- <include url="skin/vtourskin_design_black.xml"       /> -->
+
+
+	<!-- startup action - load the first scene -->
+	<action name="startup" autorun="onstart">
+		if(startscene === null OR !scene[get(startscene)], copy(startscene,scene[0].name); );
+		loadscene(get(startscene), null, MERGE);
+		if(startactions !== null, startactions() );
+	</action>
+
+	<action name="nextscene">
+		if(%1 != findnext, set(i,0));
+		txtadd(scenexml,'<krpano>',get(scene[%i].content),'</krpano>');
+		if(scenexml == xml.content,
+	   	inc(i);
+	   	if(i == scene.count, set(i,0));
+	   	loadscene(get(scene[%i].name), null, KEEPVIEW, BLEND(0.2));
+	  	,
+	   	inc(i);
+	   	if(i LT scene.count, nextscene(findnext));
+	  	);
+	</action>
+
+	<action name="prevscene">
+		if(%1 != findnext, sub(i,scene.count,1));
+		txtadd(scenexml,'<krpano>',get(scene[%i].content),'</krpano>');
+		if(scenexml == xml.content,
+	   	dec(i);
+	   	if(i LT 0, sub(i,scene.count,1));
+	   	loadscene(get(scene[%i].name), null, KEEPVIEW, BLEND(0.2));
+	  	,
+	   	dec(i);
+	   	if(i GE 0, prevscene(findnext));
+	  	);
+	</action>
+
+	<action name="draglayer">
+		copy(drag_currentx, x);
+		copy(drag_currenty, y);
+		copy(drag_stagex, mouse.stagex);
+		copy(drag_stagey, mouse.stagey);
+		indexoftxt(align_contains_right, get(align), 'right');
+		indexoftxt(align_contains_bottom, get(align), 'bottom');
+		calc(drag_align_x, align_contains_right GE 0 ? -1 : +1);
+		calc(drag_align_y, align_contains_bottom GE 0 ? -1 : +1);
+		asyncloop(pressed,
+			calc(x, drag_currentx + (mouse.stagex - drag_stagex)*drag_align_x);
+			calc(y, drag_currenty + (mouse.stagey - drag_stagey)*drag_align_y);
+		  );
+	</action>
+
+	<action name="extract_first_angle_js" type="Javascript"><![CDATA[
+		
+		var mx = krpano.get("mouse.downx");
+		var my = krpano.get("mouse.downy");
+		var pnt = krpano.screentosphere(mx,my);
+		var h = pnt.x;
+		var v = pnt.y;
+		var adj_h = - (h - 90);
+		krpano.set("data[first_angle].angle", adj_h );
+		krpano.set("data[first_angle].height", v );
+
+		krpano.call("removehotspot('temp_hs')");
+
+	      var hs_name = "temp_hs";
+
+	      krpano.call("addhotspot(" + hs_name + ")");
+	      krpano.set("hotspot["+hs_name+"].url", "tracked.png");
+	      krpano.set("hotspot["+hs_name+"].ath", h);
+	      krpano.set("hotspot["+hs_name+"].atv", v);
+	      krpano.set("hotspot["+hs_name+"].distorted", true);
+	      krpano.set("hotspot["+hs_name+"].alpha", 0.6);
+
+		alert('First perspective selected: ' + adj_h);
+		]]>
+			
+		</action>
+
+	<action name="extract_second_angle_js" type="Javascript"><![CDATA[
+
+		var mx = krpano.get("mouse.downx");
+		var my = krpano.get("mouse.downy");
+		var pnt = krpano.screentosphere(mx,my);
+		var h = pnt.x;
+		var v = pnt.y;
+		var adj_h = - (h - 90);
+		krpano.set("data[second_angle].angle", adj_h );
+		krpano.set("data[second_angle].height", v );
+
+		krpano.call("removehotspot('temp_hs')");
+
+	      var hs_name = "temp_hs";
+
+	      krpano.call("addhotspot(" + hs_name + ")");
+	      krpano.set("hotspot["+hs_name+"].url", "tracked.png");
+	      krpano.set("hotspot["+hs_name+"].ath", h);
+	      krpano.set("hotspot["+hs_name+"].atv", v);
+	      krpano.set("hotspot["+hs_name+"].distorted", true);
+	      krpano.set("hotspot["+hs_name+"].alpha", 0.6);
+
+		alert('Second perspective selected: ' + adj_h);
+		]]>
+			
+		</action>
+
+	<action name="compute_coordinates" type="Javascript"><![CDATA[
+		
+		//alert(krpano.get('data[current_coordinates].lat') + ' ; ' + krpano.get('data[current_coordinates].lng'));
+
+        var corax = krpano.get('data[current_coordinates].lat');
+        var coray = krpano.get('data[current_coordinates].lng');
+
+
+
+        var corbx = krpano.get('data[last_coordinates].lat');
+        var corby = krpano.get('data[last_coordinates].lng');
+
+        //alert('current coordinates A and B: ' + corax + '/' + coray + ' ; ' + corbx + '/' + corby);
+
+        var alpha = krpano.get('data[first_angle].angle');
+        var beta = krpano.get('data[second_angle].angle');
+
+        //alert('angles alpha and beta: ' + alpha + ' ; ' + beta);
+
+        var xa = Math.cos(alpha * Math.PI/180);
+        var ya = Math.sin(alpha * Math.PI/180);
+
+        var xb = Math.cos(beta * Math.PI/180);
+        var yb = Math.sin(beta * Math.PI/180);
+
+        //alert('vectors A and B: ' + xa + '/' + ya + " ; " + xb + '/' + yb);
+
+        var pax = parseFloat(corax) + parseFloat(xa);
+        var pay = parseFloat(coray) + parseFloat(ya);
+
+        var pbx = parseFloat(corbx) + parseFloat(xb);
+        var pby = parseFloat(corby) + parseFloat(yb);
+
+        //alert('increment points A and B: ' + pax + '/' + pay + ' ; ' + pbx + '/' + pby);
+
+        var u = -((corax - pax) * (coray - corby) - (coray - pay) * (corax - corbx))/((corax - pax)*(corby - pby) - (coray - pay)*(corbx - pbx));
+
+        var intersect_x = parseFloat(corax) + parseFloat(u*(pax - corax));
+        var intersect_y = parseFloat(coray) + parseFloat(u*(pay - coray));
+
+        //alert('Determinant u: ' + u);
+
+        krpano.set('data[intersection].x', intersect_x);
+        krpano.set('data[intersection].y', intersect_y);
+
+        alert("Object coordinates are lat=" + krpano.get('data[intersection].x') + " and lng=" + krpano.get('data[intersection].y') );
+
+        krpano.call('layer[map].addspot("new_spot","get(data[intersection].x)", "get(data[intersection].y)", 0)');
+       	krpano.call('layer[map].activatespot("new_spot")');
+       	krpano.call('layer[map].pantospot("new_spot")');
+
+       	window.open("objectform.html","width=100,height=60");
+
+
+  
+	]]></action>
+
+	<action name="update_coordinates" type="Javascript" args="lat,lng"><![CDATA[
+
+		var cur_lat = krpano.get('data[current_coordinates].lat');
+		var cur_lng = krpano.get('data[current_coordinates].lng');
+
+		krpano.set('data[last_coordinates].lat', cur_lat);
+		krpano.set('data[last_coordinates].lng', cur_lng);
+
+		var new_lat = args[1];
+		var new_lng = args[2];
+
+		krpano.set('data[current_coordinates].lat', new_lat);
+		krpano.set('data[current_coordinates].lng', new_lng);
+
+
+	]]></action>
+
+	<contextmenu fullscreen="true" versioninfo="false">
+		<item name="kr" caption="KRPANO" />
+		<item name="fs" caption="FULLSCREEN" visible='Show'/>
+		<item name="xx" caption="Extract First Angle" onclick="extract_first_angle_js();"/>
+		<item name="yy" caption="Extract Second Angle" onclick="extract_second_angle_js();"/>
+		<item name="zz" caption="Compute Object Coordinates" onclick="compute_coordinates()"/>
+		<item name="cc" caption="Change Controlmode" onclick="cm_changecontrolmode();"  separator="true" visible='Hide'/>
+		<item name="nv" caption="Normal View"         visible='Hide' separator="true"      />
+		<item name="fv" caption="Fisheye View"        visible='Hide' devices="flash|webgl" />
+		<item name="sv" caption="Stereographic View"  visible='Hide' devices="flash|webgl" />
+		<item name="av" caption="Architectural View"  visible='Hide'                       />
+		<item name="pv" caption="Pannini View"        visible='Hide' devices="flash|webgl" />
+		<item name="lp" caption="Little Planet View"  visible='Hide' devices="flash|webgl" />
+	</contextmenu>
+
+	<layer name="object-detection-button-container" type="container" keep="true" align="lefttop" x="20" y="20" width="200" height="60" bgcolor="#121212" bgalpha="0.7" bgcapture="true" maskchildren="true">
+		<layer name="object_detection_off" url="off-switch.png" align="left" x="10" y="0" 
+			onclick.addevent="set(layer[object_detection_off].enabled,'false'); set(layer[object_detection_off].visible,'false'); set(layer[object_detection_on].enabled,'true'); set(layer[object_detection_on].visible,'true');action(nextscene);" 
+			visible="true" enabled="true"/>
+		<layer name="object_detection_on" url="on-switch.png" align="left" x="10" y="0" 
+			onclick.addevent="set(layer[object_detection_on].enabled,'false'); set(layer[object_detection_on].visible,'false'); set(layer[object_detection_off].enabled,'true'); set(layer[object_detection_off].visible,'true');action(prevscene)" 
+			visible="false" enabled="false"/>
+		<layer name="object_detection_label_container" type="container" align="left" x="60" y="0" width="100" height="100" bgalpha="0.0" >
+			<layer name="object_detection_label" html="Detect Objects" align="center" x="0" y="0" style="text" />
+		</layer>
+	</layer>
+
+	<layer name="object-tracking-button-container" type="container" keep="true" align="lefttop" x="20" y="80" width="200" height="60" bgcolor="#121212" bgalpha="0.7" bgcapture="true" maskchildren="true">
+		<layer name="object_tracking_off" url="off-switch.png" align="left" x="10" y="0" 
+				onclick.addevent="set(layer[object_tracking_off].enabled,'false'); set(layer[object_tracking_off].visible,'false'); set(layer[object_tracking_on].enabled,'true'); set(layer[object_tracking_on].visible,'true');set(layer[draggable-map-container].visible, 'false'); set(layer[aimbox].visible, 'true')" 
+				visible="true" enabled="true"/>
+		<layer name="object_tracking_on" url="on-switch.png" align="left" x="10" y="0" 
+			onclick.addevent="set(layer[object_tracking_on].enabled,'false'); set(layer[object_tracking_on].visible,'false'); set(layer[object_tracking_off].enabled,'true'); set(layer[object_tracking_off].visible,'true');set(layer[draggable-map-container].visible, 'true'); set(layer[aimbox].visible, 'false'); removehotspot('temp_hs')" 
+			visible="false" enabled="false"/>
+		<layer name="object_tracking_label_container" type="container" align="left" x="60" y="0" width="100" height="100" bgalpha="0.0" >
+			<layer name="object_tracking_label" html="Measure Objects" align="center" x="0" y="0" style="text" />
+		</layer>
+	</layer>
+
+	<layer name="aimbox_container" type="container" keep="true" align="center" x="0" y="0" width="300" height="300" bgcolor="0x000000" bgalpha="0.0" bgcapture="true" enabled="false" handcursor= "false">
+		<layer name="aimbox" type="image" align="center" x ="0" y="0" width="100%" url="crosshair_green.png" visible="false" enabled="false" handcursor= "false"/>
+	</layer>
+
+	<style name="text"
+	       type="text"
+	       background="false"
+	       css="color:white; font-family: Helvetica, Arial, sans-serif;"
+	       enabled="false"
+	       />
+
+	<layer name="draggable-map-container" type="container" keep="true" align="righttop" x="20" y="20" width="30%" height="40%" bgcolor="0xF1F1F1" bgalpha="0.5" bgcapture="true" maskchildren="true" ondown.addevent="draglayer();" visible="true">
+		<layer name="map"
+			type="container" 
+			keep="true" 
+			width.normal="95%" 
+			height.normal="90%" 
+			url.flash="../src/plugins/bing.swf" 
+			url.html5="../src/plugins/googlemaps.js" 
+			x="0" y="0"
+			align="center" 
+			maptype="satellite"
+	        language="en"
+	        lat="26.119135"
+	        lng="-80.104599"
+	        zoom="18"
+	        tilt="0"
+	        heading="0"
+	        controls="zoom|maptype"
+	        poi="false"
+	        activespotenabled="true"
+	        bgcolor="0x000000" bgalpha="0.0"
+	        onmapready="activatespot(miami1);pantospot(miami1);setzoom(19)"
+	        onmaptypechanged=""
+	        onmapmoved=""
+	        onmapzoomed=""
+	        key="AIzaSyAFG1j88GZLmWjL2cKgWG0-ykGDOUzF0aI"
+
+			>
+			<spotstyle name="custom"
+	           url="pin_purple_inactive.png"
+	           overurl="pin_purple_active.png"
+	           activeurl="pin_purple_active.png"
+	           edge="center"
+	           x="0"
+	           y="0"
+	           scale="1.0"
+	        />
+	        <spot name="miami1"
+		      spotstyle="custom"
+		      url=""
+		      lat="26.119261"
+	          lng="-80.104596"
+		      heading="0"
+		      active="true"
+		      onclick="activatespot(miami1);pantospot(miami1);if(layer[object_detection_on].visible== 'false',loadscene('scene_miamibeach1'),loadscene('scene_miamibeach1_OD'));update_coordinates(get(lat),get(lng));"
+		      />
+
+	        <spot name="miami2"
+		      spotstyle="custom"
+		      url=""
+		      lat="26.119135"
+	          lng="-80.104599"
+		      heading="0"
+		      active="true"
+		      onclick="activatespot(miami2);pantospot(miami2);if(layer[object_detection_on].visible == 'false',loadscene('scene_miamibeach2'),loadscene('scene_miamibeach2_OD'));update_coordinates(get(lat),get(lng));"
+		      />
+
+		      <spot name="miami3"
+		      spotstyle="custom"
+		      url=""
+		      lat="26.119345"
+	          lng="-80.104735"
+		      heading="0"
+		      active="true"
+		      onclick="activatespot(miami3);pantospot(miami3);if(layer[object_detection_on].visible== 'false',loadscene('scene_miamibeach3'),loadscene('scene_miamibeach3_OD'));update_coordinates(get(lat),get(lng));"
+		      />
+
+		      <spot name="miami4"
+		      spotstyle="custom"
+		      url=""
+		      lat="26.119362"
+	          lng="-80.104891"
+		      heading="0"
+		      active="true"
+		      onclick="activatespot(miami4);pantospot(miami4);if(layer[object_detection_on].visible== 'false',loadscene('scene_miamibeach4'),loadscene('scene_miamibeach4_OD'));update_coordinates(get(lat),get(lng));"
+		      />
+
+		      <spot name="miami5"
+		      spotstyle="custom"
+		      url=""
+		      lat="26.1194076"
+	          lng="-80.1045353"
+		      heading="0"
+		      active="true"
+		      onclick="activatespot(miami5);pantospot(miami5);if(layer[object_detection_on].visible== 'false',loadscene('scene_miamibeach5'),loadscene('scene_miamibeach5_OD'));update_coordinates(get(lat),get(lng));"
+		      />
+
+		      <spot name="miami6"
+		      spotstyle="custom"
+		      url=""
+		      lat="26.119572"
+	          lng="-80.104569"
+		      heading="0"
+		      active="true"
+		      onclick="activatespot(miami6);pantospot(miami6);if(layer[object_detection_on].visible== 'false',loadscene('scene_miamibeach6'),loadscene('scene_miamibeach6_OD'));update_coordinates(get(lat),get(lng));"
+		      />
+
+	    </layer>
+	</layer>
+
+	
+	
+	
+
+	<scene name="scene_miamibeach1" title="miamibeach1" onstart="" thumburl="panos/miamibeach1.tiles/thumb.jpg" lat="" lng="" heading="">
+
+		<view hlookat="0.0" vlookat="0.0" fovtype="MFOV" fov="120" maxpixelzoom="2.0" fovmin="70" fovmax="140" limitview="auto" />
+
+		<preview url="panos/miamibeach1.tiles/preview.jpg" />
+
+		<image>
+			<cube url="panos/miamibeach1.tiles/pano_%s.jpg" />
+		</image>
+		<hotspot name="spot1" style="skin_hotspotstyle" ath="-25.136" atv="15.801" linkedscene="scene_miamibeach3" onclick.addevent="layer[map].activatespot(miami3);layer[map].pantospot(miami3);set(data[last_clicked_hotspot].data, get(ath));update_coordinates(lat,lng);" />
+		<hotspot name="spot2" style="skin_hotspotstyle" ath="-153.331" atv="11.812" linkedscene="scene_miamibeach2" onclick.addevent="layer[map].activatespot(miami2);layer[map].pantospot(miami2);set(data[last_clicked_hotspot].data, get(ath));update_coordinates(lat,lng);" />
+		<hotspot name="spot3" style="skin_hotspotstyle" ath="47.793" atv="16.868" linkedscene="scene_miamibeach5" onclick.addevent="layer[map].activatespot(miami5);layer[map].pantospot(miami5);set(data[last_clicked_hotspot].data, get(ath));update_coordinates(lat,lng);"/>
+
+	</scene>
+
+	<scene name="scene_miamibeach1_OD" title="miamibeach1_OD" onstart="" thumburl="panos/miamibeach1_OD.tiles/thumb.jpg" lat="" lng="" heading="">
+
+		<view hlookat="0.0" vlookat="0.0" fovtype="MFOV" fov="120" maxpixelzoom="2.0" fovmin="70" fovmax="140" limitview="auto" />
+
+		<preview url="panos/miamibeach1_OD.tiles/preview.jpg" />
+
+		<image>
+			<cube url="panos/miamibeach1_OD.tiles/pano_%s.jpg" />
+		</image>
+		<hotspot name="spot1" style="skin_hotspotstyle" ath="-25.136" atv="15.801" linkedscene="scene_miamibeach3_OD" onclick.addevent="layer[map].activatespot(miami3);layer[map].pantospot(miami3);set(data[last_clicked_hotspot].data, get(ath));update_coordinates(lat,lng);" />
+		<hotspot name="spot2" style="skin_hotspotstyle" ath="-153.331" atv="11.812" linkedscene="scene_miamibeach2_OD" onclick.addevent="layer[map].activatespot(miami2);layer[map].pantospot(miami2);set(data[last_clicked_hotspot].data, get(ath));update_coordinates(lat,lng);" />
+		<hotspot name="spot3" style="skin_hotspotstyle" ath="47.793" atv="16.868" linkedscene="scene_miamibeach5_OD" onclick.addevent="layer[map].activatespot(miami5);layer[map].pantospot(miami5);set(data[last_clicked_hotspot].data, get(ath));update_coordinates(lat,lng);"/>
+
+	</scene>
+
+	<scene name="scene_miamibeach2" title="miamibeach2" onstart="" thumburl="panos/miamibeach2.tiles/thumb.jpg" lat="" lng="" heading="">
+
+		<view hlookat="0.0" vlookat="0.0" fovtype="MFOV" fov="120" maxpixelzoom="2.0" fovmin="70" fovmax="140" limitview="auto" />
+
+		<preview url="panos/miamibeach2.tiles/preview.jpg" />
+
+		<image>
+			<cube url="panos/miamibeach2.tiles/pano_%s.jpg" />
+		</image>
+		<hotspot name="spot1" style="skin_hotspotstyle" ath="-2.382" atv="25.037" linkedscene="scene_miamibeach1" onclick.addevent="layer[map].activatespot(miami1);layer[map].pantospot(miami1);set(data[last_clicked_hotspot].data, get(ath));update_coordinates(lat,lng);" />
+
+	</scene>
+
+	<scene name="scene_miamibeach2_OD" title="miamibeach2_OD" onstart="" thumburl="panos/miamibeach2_OD.tiles/thumb.jpg" lat="" lng="" heading="">
+
+		<view hlookat="0.0" vlookat="0.0" fovtype="MFOV" fov="120" maxpixelzoom="2.0" fovmin="70" fovmax="140" limitview="auto" />
+
+		<preview url="panos/miamibeach2_OD.tiles/preview.jpg" />
+
+		<image>
+			<cube url="panos/miamibeach2_OD.tiles/pano_%s.jpg" />
+		</image>
+		<hotspot name="spot1" style="skin_hotspotstyle" ath="-2.382" atv="25.037" linkedscene="scene_miamibeach1_OD" onclick.addevent="layer[map].activatespot(miami1);layer[map].pantospot(miami1);set(data[last_clicked_hotspot].data, get(ath));update_coordinates(lat,lng);" />
+
+	</scene>
+
+	<scene name="scene_miamibeach3" title="miamibeach3" onstart="" thumburl="panos/miamibeach3.tiles/thumb.jpg" lat="" lng="" heading="">
+
+		<view hlookat="0.0" vlookat="0.0" fovtype="MFOV" fov="120" maxpixelzoom="2.0" fovmin="70" fovmax="140" limitview="auto" />
+
+		<preview url="panos/miamibeach3.tiles/preview.jpg" />
+
+		<image>
+			<cube url="panos/miamibeach3.tiles/pano_%s.jpg" />
+		</image>
+		<hotspot name="spot1" style="skin_hotspotstyle" ath="-22.575" atv="15.420" linkedscene="scene_miamibeach4" onclick.addevent="layer[map].activatespot(miami4);layer[map].pantospot(miami4);set(data[last_clicked_hotspot].data, get(ath));update_coordinates(lat,lng);"/>
+		<hotspot name="spot2" style="skin_hotspotstyle" ath="-153.110" atv="27.171" linkedscene="scene_miamibeach1" onclick.addevent="layer[map].activatespot(miami1);layer[map].pantospot(miami1);set(data[last_clicked_hotspot].data, get(ath));update_coordinates(lat,lng);"/>
+
+	</scene>
+
+	<scene name="scene_miamibeach3_OD" title="miamibeach3_OD" onstart="" thumburl="panos/miamibeach3_OD.tiles/thumb.jpg" lat="" lng="" heading="">
+
+		<view hlookat="0.0" vlookat="0.0" fovtype="MFOV" fov="120" maxpixelzoom="2.0" fovmin="70" fovmax="140" limitview="auto" />
+
+		<preview url="panos/miamibeach3_OD.tiles/preview.jpg" />
+
+		<image>
+			<cube url="panos/miamibeach3_OD.tiles/pano_%s.jpg" />
+		</image>
+		<hotspot name="spot1" style="skin_hotspotstyle" ath="-22.575" atv="15.420" linkedscene="scene_miamibeach4_OD" onclick.addevent="layer[map].activatespot(miami4);layer[map].pantospot(miami4);set(data[last_clicked_hotspot].data, get(ath));update_coordinates(lat,lng);"/>
+		<hotspot name="spot2" style="skin_hotspotstyle" ath="-153.110" atv="27.171" linkedscene="scene_miamibeach1_OD" onclick.addevent="layer[map].activatespot(miami1);layer[map].pantospot(miami1);set(data[last_clicked_hotspot].data, get(ath));update_coordinates(lat,lng);"/>
+
+	</scene>
+
+	<scene name="scene_miamibeach4" title="miamibeach4" onstart="" thumburl="panos/miamibeach4.tiles/thumb.jpg" lat="" lng="" heading="">
+
+		<view hlookat="0.0" vlookat="0.0" fovtype="MFOV" fov="120" maxpixelzoom="2.0" fovmin="70" fovmax="140" limitview="auto" />
+
+		<preview url="panos/miamibeach4.tiles/preview.jpg" />
+
+		<image>
+			<cube url="panos/miamibeach4.tiles/pano_%s.jpg" />
+		</image>
+		<hotspot name="spot1" style="skin_hotspotstyle" ath="-154.563" atv="22.839" linkedscene="scene_miamibeach3" onclick.addevent="layer[map].activatespot(miami3);layer[map].pantospot(miami3);set(data[last_clicked_hotspot].data, get(ath));update_coordinates(lat,lng);"/>
+		
+
+	</scene>
+
+	<scene name="scene_miamibeach4_OD" title="miamibeach4_OD" onstart="" thumburl="panos/miamibeach4_OD.tiles/thumb.jpg" lat="" lng="" heading="">
+
+		<view hlookat="0.0" vlookat="0.0" fovtype="MFOV" fov="120" maxpixelzoom="2.0" fovmin="70" fovmax="140" limitview="auto" />
+
+		<preview url="panos/miamibeach4_OD.tiles/preview.jpg" />
+
+		<image>
+			<cube url="panos/miamibeach4_OD.tiles/pano_%s.jpg" />
+		</image>
+		<hotspot name="spot1" style="skin_hotspotstyle" ath="-154.563" atv="22.839" linkedscene="scene_miamibeach3_OD" onclick.addevent="layer[map].activatespot(miami3);layer[map].pantospot(miami3);set(data[last_clicked_hotspot].data, get(ath));update_coordinates(lat,lng);"/>
+
+	</scene>
+
+	<scene name="scene_miamibeach5" title="miamibeach5" onstart="" thumburl="panos/miamibeach5.tiles/thumb.jpg" lat="" lng="" heading="">
+
+		<view hlookat="0.0" vlookat="0.0" fovtype="MFOV" fov="120" maxpixelzoom="2.0" fovmin="70" fovmax="140" limitview="auto" />
+
+		<preview url="panos/miamibeach5.tiles/preview.jpg" />
+
+		<image>
+			<cube url="panos/miamibeach5.tiles/pano_%s.jpg" />
+		</image>
+		<hotspot name="spot1" style="skin_hotspotstyle" ath="2.607" atv="25.437" linkedscene="scene_miamibeach6" onclick.addevent="layer[map].activatespot(miami6);layer[map].pantospot(miami6)"/>
+		<hotspot name="spot2" style="skin_hotspotstyle" ath="-154.566" atv="16.836" linkedscene="scene_miamibeach1" onclick.addevent="layer[map].activatespot(miami1);layer[map].pantospot(miami1);set(data[last_clicked_hotspot].data, get(ath));update_coordinates(lat,lng);"/>
+
+	</scene>
+
+	<scene name="scene_miamibeach5_OD" title="miamibeach5_OD" onstart="" thumburl="panos/miamibeach5_OD.tiles/thumb.jpg" lat="" lng="" heading="">
+
+		<view hlookat="0.0" vlookat="0.0" fovtype="MFOV" fov="120" maxpixelzoom="2.0" fovmin="70" fovmax="140" limitview="auto" />
+
+		<preview url="panos/miamibeach5_OD.tiles/preview.jpg" />
+
+		<image>
+			<cube url="panos/miamibeach5_OD.tiles/pano_%s.jpg" />
+		</image>
+		<hotspot name="spot1" style="skin_hotspotstyle" ath="2.607" atv="25.437" linkedscene="scene_miamibeach6_OD" onclick.addevent="layer[map].activatespot(miami6);layer[map].pantospot(miami6);set(data[last_clicked_hotspot].data, get(ath));update_coordinates(lat,lng);"/>
+		<hotspot name="spot2" style="skin_hotspotstyle" ath="-154.566" atv="16.836" linkedscene="scene_miamibeach1_OD" onclick.addevent="layer[map].activatespot(miami1);layer[map].pantospot(miami1);set(data[last_clicked_hotspot].data, get(ath));update_coordinates(lat,lng);"/>
+
+	</scene>
+
+	<scene name="scene_miamibeach6" title="miamibeach6" onstart="" thumburl="panos/miamibeach6.tiles/thumb.jpg" lat="" lng="" heading="">
+
+		<view hlookat="0.0" vlookat="0.0" fovtype="MFOV" fov="120" maxpixelzoom="2.0" fovmin="70" fovmax="140" limitview="auto" />
+
+		<preview url="panos/miamibeach6.tiles/preview.jpg" />
+
+		<image>
+			<cube url="panos/miamibeach6.tiles/pano_%s.jpg" />
+		</image>
+		<hotspot name="spot1" style="skin_hotspotstyle" ath="-169.064" atv="20.168" linkedscene="scene_miamibeach5" onclick.addevent="layer[map].activatespot(miami5);layer[map].pantospot(miami5);set(data[last_clicked_hotspot].data, get(ath));update_coordinates(lat,lng);"/>
+
+	</scene>
+
+	<scene name="scene_miamibeach6_OD" title="miamibeach6_OD" onstart="" thumburl="panos/miamibeach6_OD.tiles/thumb.jpg" lat="" lng="" heading="">
+
+		<view hlookat="0.0" vlookat="0.0" fovtype="MFOV" fov="120" maxpixelzoom="2.0" fovmin="70" fovmax="140" limitview="auto" />
+
+		<preview url="panos/miamibeach6_OD.tiles/preview.jpg" />
+
+		<image>
+			<cube url="panos/miamibeach6_OD.tiles/pano_%s.jpg" />
+		</image>
+		<hotspot name="spot1" style="skin_hotspotstyle" ath="-169.064" atv="20.168" linkedscene="scene_miamibeach5_OD" onclick.addevent="layer[map].activatespot(miami5);layer[map].pantospot(miami5);set(data[last_clicked_hotspot].data, get(ath));update_coordinates(lat,lng);"/>
+
+	</scene>
+
+	<data name="last_clicked_hotspot" clicked="false" data="empty">
+	</data>
+
+	<data name="current_coordinates" lat="26.119261" lng="-80.104596">
+	</data>
+
+	<data name="last_coordinates" lat="" lng="">
+	</data>
+
+	<data name="intersection" lat="" lng="">
+	</data>
+
+	<data name="first_angle" angle="" height="">
+	</data>
+
+	<data name="second_angle" angle="" height="">
+	</data>
+
+
+</krpano>
+
